@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@interview-prep-kit/shared": "workspace:*",
+    "cheerio": "^1.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
