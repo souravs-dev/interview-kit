@@ -51,7 +51,7 @@ const practiceSchema = new Schema(
   {
     lastConfidence: { type: Number, enum: [1, 2, 3, 4, 5], default: null },
     lastReviewedAt: { type: String, default: null },
-    timesReviewed: { type: Number, default: 0 },
+    timesReviewed: { type: Number, required: true, default: 0 },
     history: { type: [practiceHistorySchema], default: [] },
   },
   { _id: false },
@@ -64,7 +64,11 @@ const flashcardSchema = new Schema(
     back: { type: String, required: true },
     requirement_ids: { type: [String], default: [] },
     _meta: { type: itemMetaSchema, required: false },
-    practice: { type: practiceSchema, required: false },
+    practice: {
+      type: practiceSchema,
+      required: true,
+      default: () => ({ lastConfidence: null, lastReviewedAt: null, timesReviewed: 0, history: [] }),
+    },
   },
   { _id: false },
 );
@@ -79,6 +83,57 @@ const scheduleDaySchema = new Schema(
   { _id: false },
 );
 
+/** Explicit sub-schemas (not plain nested objects) for every top-level section, each marked `required: true` with a default — this is what makes InferSchemaType treat `kit.role`, `kit.source`, etc. as always-present rather than optional, matching how they're actually used everywhere. */
+const sourceSchema = new Schema(
+  {
+    company: { type: String, default: "" },
+    company_url: { type: String, required: true },
+    role: { type: String, default: "" },
+    location: { type: String, default: "" },
+    jd_chars: { type: Number, default: 0 },
+    researched_at: { type: String, default: "" },
+    pages_used: { type: [String], default: [] },
+  },
+  { _id: false },
+);
+
+const companyBriefSchema = new Schema(
+  {
+    summary: { type: String, default: "" },
+    what_they_do: { type: String, default: "" },
+    sources: { type: [String], default: [] },
+    _meta: { type: itemMetaSchema, required: false },
+  },
+  { _id: false },
+);
+
+const roleSchema = new Schema(
+  {
+    title: { type: String, default: "" },
+    seniority: { type: String, default: "" },
+    responsibilities: { type: [String], default: [] },
+    requirements: { type: [requirementSchema], default: [] },
+  },
+  { _id: false },
+);
+
+const scheduleSchema = new Schema(
+  {
+    days_available: { type: Number, default: 0 },
+    days: { type: [scheduleDaySchema], default: [] },
+    _meta: { type: itemMetaSchema, required: false },
+  },
+  { _id: false },
+);
+
+const coverageSchema = new Schema(
+  {
+    uncovered_requirement_ids: { type: [String], default: [] },
+    passes: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
 const kitSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User", index: true },
@@ -89,38 +144,13 @@ const kitSchema = new Schema(
     /** Original input text, retained for section-level regeneration (RFC-001 section 3.3). */
     jd: { type: String, required: true },
 
-    source: {
-      company: { type: String, default: "" },
-      company_url: { type: String, required: true },
-      role: { type: String, default: "" },
-      location: { type: String, default: "" },
-      jd_chars: { type: Number, default: 0 },
-      researched_at: { type: String, default: "" },
-      pages_used: { type: [String], default: [] },
-    },
-    company_brief: {
-      summary: { type: String, default: "" },
-      what_they_do: { type: String, default: "" },
-      sources: { type: [String], default: [] },
-      _meta: { type: itemMetaSchema, required: false },
-    },
-    role: {
-      title: { type: String, default: "" },
-      seniority: { type: String, default: "" },
-      responsibilities: { type: [String], default: [] },
-      requirements: { type: [requirementSchema], default: [] },
-    },
+    source: { type: sourceSchema, required: true },
+    company_brief: { type: companyBriefSchema, required: true, default: () => ({}) },
+    role: { type: roleSchema, required: true, default: () => ({}) },
     questions: { type: [questionSchema], default: [] },
     flashcards: { type: [flashcardSchema], default: [] },
-    schedule: {
-      days_available: { type: Number, default: 0 },
-      days: { type: [scheduleDaySchema], default: [] },
-      _meta: { type: itemMetaSchema, required: false },
-    },
-    coverage: {
-      uncovered_requirement_ids: { type: [String], default: [] },
-      passes: { type: Number, default: 0 },
-    },
+    schedule: { type: scheduleSchema, required: true, default: () => ({}) },
+    coverage: { type: coverageSchema, required: true, default: () => ({}) },
   },
   { timestamps: true },
 );

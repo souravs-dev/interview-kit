@@ -17,6 +17,10 @@
     "@interview-prep-kit/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "helmet": "^8.0.0",
     "mongoose": "^8.7.3",
     "zod": "^3.23.8"
   },
@@ -26,6 +30,11 @@
     "vitest": "^2.1.4",
     "@types/node": "^22.7.5",
     "@types/bcryptjs": "^2.4.6",
-    "mongodb-memory-server": "^10.1.2"
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/supertest": "^6.0.2",
+    "mongodb-memory-server": "^10.1.2",
+    "supertest": "^7.0.0"
   }
 }
