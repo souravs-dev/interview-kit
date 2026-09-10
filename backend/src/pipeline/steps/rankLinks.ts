@@ -4,23 +4,31 @@ export interface ScoredLink extends PageLink {
   score: number;
 }
 
-/** Whole-path-segment matches (strong signal) — e.g. "/careers", "/join-us", "/eng/jobs". */
-const STRONG_PATH_SEGMENTS = new Set([
+/**
+ * Strong signal, matched against individual hyphen-split tokens of each
+ * path segment — not just whole-segment equality. This is what finds a
+ * real hiring page at a multi-word slug like "/eng/blog/how-we-hire"
+ * (the brief's own example: GitLab/PostHog publish hiring content at
+ * paths a fixed list would never predict), without over-matching, since
+ * the "careers-in-real-estate" decoy is discriminated by the date-archive
+ * and depth penalties below, not by withholding token-level matching.
+ */
+const STRONG_PATH_TOKENS = new Set([
   "careers",
   "career",
   "jobs",
   "job",
   "hiring",
+  "hire",
+  "hires",
   "join",
-  "join-us",
-  "work-with-us",
   "opportunities",
   "positions",
   "openings",
 ]);
 
-/** Whole-path-segment matches (weaker signal) — the brief calls out a handbook by name as an unpredictable place hiring info lives. */
-const WEAK_PATH_SEGMENTS = new Set(["handbook", "team", "life"]);
+/** Weaker token signal — the brief calls out a handbook by name as an unpredictable place hiring info lives. */
+const WEAK_PATH_TOKENS = new Set(["handbook", "team", "life"]);
 
 /** Substring signal on anchor text — weaker evidence than a path-segment match, but catches phrasing like "How We Hire". */
 const TEXT_KEYWORDS = ["career", "job", "hire", "hiring", "join us", "join our", "work with us", "life at", "open position", "open role"];
@@ -33,13 +41,18 @@ function pathSegments(url: URL): string[] {
   return url.pathname.split("/").filter(Boolean).map((s) => s.toLowerCase());
 }
 
+function pathTokens(segments: string[]): string[] {
+  return segments.flatMap((s) => s.split("-"));
+}
+
 function scoreLink(resolved: URL, anchorText: string): number {
   const segments = pathSegments(resolved);
+  const tokens = pathTokens(segments);
   const anchorLower = anchorText.toLowerCase();
   let score = 0;
 
-  if (segments.some((s) => STRONG_PATH_SEGMENTS.has(s))) score += 5;
-  else if (segments.some((s) => WEAK_PATH_SEGMENTS.has(s))) score += 2;
+  if (tokens.some((t) => STRONG_PATH_TOKENS.has(t))) score += 5;
+  else if (tokens.some((t) => WEAK_PATH_TOKENS.has(t))) score += 2;
 
   if (TEXT_KEYWORDS.some((kw) => anchorLower.includes(kw))) score += 2;
 
