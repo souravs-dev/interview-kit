@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, ApiError } from "./apiClient";
+import { api } from "./apiClient";
 
 export interface SessionUser {
   id: string;
@@ -26,12 +26,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const { user } = await api.get<{ user: SessionUser }>("/api/auth/session");
       setUser(user);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setUser(null);
-      } else {
-        throw error;
-      }
+    } catch {
+      // Treat both "not logged in" (401) and a genuinely unreachable API
+      // (e.g. the backend cold-starting on Render) the same way — the UI
+      // can only show a logged-out state either way, and letting a raw
+      // network error bubble out of this fire-and-forget mount effect
+      // would surface as an unhandled promise rejection instead.
+      setUser(null);
     } finally {
       setLoading(false);
     }

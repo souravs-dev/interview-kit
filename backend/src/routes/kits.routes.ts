@@ -27,8 +27,8 @@ async function loadOwnedKitOr404(req: AuthedRequest, res: Response) {
 }
 
 const CreateKitBody = z.object({
-  jd: z.string().min(1),
-  company_url: z.string().url(),
+  jd: z.string().trim().min(1, "Job description is required"),
+  company_url: z.string().trim().url(),
   days: z.number().int().positive(),
   force: z.boolean().optional(),
 });
@@ -169,6 +169,15 @@ export function createKitsRouter(): Router {
       const parsed = RegenerateBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: { code: "INVALID_INPUT", message: "Invalid section" } });
+        return;
+      }
+      // Section 10 edge case: a double-click (or two tabs) triggering regenerate on the
+      // same kit while a generate/regenerate job is still in flight would otherwise let
+      // two background runs load-mutate-save the same document concurrently, silently
+      // dropping whichever one saves first (last-write-wins) rather than merging cleanly.
+      const inFlightJob = await Job.findOne({ kitId: kit._id, status: "running" }).select("_id");
+      if (inFlightJob) {
+        res.status(409).json({ error: { code: "GENERATION_IN_PROGRESS", message: "A generation job is already running for this kit" } });
         return;
       }
       const section = parsed.data.section as RegenerableSection;

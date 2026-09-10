@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Router } from "express";
 import { Job } from "../db/models/Job.js";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth.js";
@@ -7,7 +8,7 @@ jobsRouter.use(requireAuth);
 
 jobsRouter.get("/:jobId", async (req: AuthedRequest, res, next) => {
   try {
-    const job = await Job.findOne({ _id: req.params.jobId, userId: req.userId });
+    const job = mongoose.isValidObjectId(req.params.jobId) ? await Job.findOne({ _id: req.params.jobId, userId: req.userId }) : null;
     if (!job) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Job not found" } });
       return;

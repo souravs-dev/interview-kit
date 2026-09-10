@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { startTestDb, stopTestDb, clearTestDb } from "../../db/__tests__/testDb.js";
 import { buildTestApp, ORIGIN_HEADER, waitForJob, type TestApp } from "./testApp.js";
+import { Job } from "../../db/models/Job.js";
 
 beforeAll(async () => {
   await startTestDb();
@@ -76,6 +77,17 @@ describe("kit creation + job polling", () => {
     expect(res.body.job_status).toBe("done");
   });
 
+  it("rejects a whitespace-only job description with 400 before it ever reaches the pipeline", async () => {
+    const testApp = buildTestApp();
+    const cookie = await registerAndGetCookie(testApp.app, "whitespace@example.com");
+    const res = await request(testApp.app)
+      .post("/api/kits")
+      .set(ORIGIN_HEADER)
+      .set("Cookie", cookie)
+      .send({ jd: "   ", company_url: COMPANY_URL, days: 3 });
+    expect(res.status).toBe(400);
+  });
+
   it("rejects an unauthenticated kit creation request", async () => {
     const testApp = buildTestApp();
     const res = await request(testApp.app).post("/api/kits").set(ORIGIN_HEADER).send({ jd: "x", company_url: COMPANY_URL, days: 1 });
@@ -126,6 +138,13 @@ describe("kit CRUD + ownership", () => {
     const testApp = buildTestApp();
     const cookie = await registerAndGetCookie(testApp.app, "someone@example.com");
     const res = await request(testApp.app).get("/api/kits/507f1f77bcf86cd799439011").set("Cookie", cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 (not a 500) for a malformed kit id instead of letting it hit Mongoose as a raw CastError", async () => {
+    const testApp = buildTestApp();
+    const cookie = await registerAndGetCookie(testApp.app, "malformed@example.com");
+    const res = await request(testApp.app).get("/api/kits/not-a-valid-object-id").set("Cookie", cookie);
     expect(res.status).toBe(404);
   });
 
@@ -243,6 +262,30 @@ describe("builder mutations", () => {
     const stillThere = after.questions.find((q: { id: string }) => q.id === technicalQuestion.id);
     expect(stillThere).toBeDefined();
     expect(stillThere.prompt).toBe(technicalQuestion.prompt);
+  });
+
+  it("rejects a regenerate request with 409 while a job is already running for the kit (double-click / two-tab race, Section 10)", async () => {
+    const testApp = buildTestApp();
+    const cookie = await registerAndGetCookie(testApp.app, "concurrent-regen@example.com");
+    const kitId = await createReadyKit(testApp, cookie);
+
+    await Job.create({
+      kitId,
+      userId: (await request(testApp.app).get("/api/auth/session").set("Cookie", cookie)).body.user.id,
+      type: "regenerate",
+      section: "questions:technical",
+      status: "running",
+      steps: [],
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    const res = await request(testApp.app)
+      .post(`/api/kits/${kitId}/regenerate`)
+      .set(ORIGIN_HEADER)
+      .set("Cookie", cookie)
+      .send({ section: "questions:technical" });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("GENERATION_IN_PROGRESS");
   });
 });
 
