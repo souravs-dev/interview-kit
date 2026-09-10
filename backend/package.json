@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
+    "@google/genai": "^2.21.0",
     "@interview-prep-kit/shared": "workspace:*",
     "cheerio": "^1.0.0",
     "zod": "^3.23.8"

@@ -14,7 +14,7 @@ Greenfield repository — `~/Applications/interview-prep-kit` was `git init`'d w
 
 **Locked inputs to this RFC** (developer decisions made before the panel ran):
 - Frontend: Next.js + Tailwind CSS. Backend: Node.js + Express. DB: MongoDB. Language: TypeScript.
-- LLM: **Anthropic Claude, Sonnet model** (developer has usable API credits — this is why Sonnet was chosen over a free-tier-only provider like Gemini/Groq, despite Anthropic having no standing free tier).
+- LLM: **Google Gemini (`gemini-3.6-flash` at time of writing), swapped in as the default provider on 2026-09-10.** Originally scoped as Anthropic Claude Sonnet on the strength of the developer's stated API credits; those credits turned out to be exhausted ($0 usable balance confirmed via a live smoke test against the real API). Rather than block on billing, switched the default to Gemini, which has a genuine standing free tier — exactly the constraint the assessment brief itself calls out. The adapter-pattern design (`LlmAdapter` interface, RFC section 3.1) made this a same-day, low-risk swap: `ClaudeAdapter` remains implemented and available via `LLM_PROVIDER=anthropic` for whenever credits are added, but `GeminiAdapter` is the default. Verified end-to-end against live Gemini: a full kit (5 requirements, correct must/nice classification, real hiring-page discovery via crawl+rank, 5 questions, 12 flashcards, zero coverage gaps, valid Appendix A structure) built in 41.7s.
 - Public-discussion search: **DuckDuckGo HTML scrape** (no API key required, accepted tradeoff: more brittle than a paid search API).
 - Standalone repo, not part of any existing monorepo.
 - Developer wants **stage-by-stage implementation review** (RFC → approval → QA plan → approval → implement in reviewable chunks), consistent with the assessment's own integrity note that AI should support planning/implementation/debugging rather than one-shot the entire submission.
@@ -156,7 +156,7 @@ sequenceDiagram
     participant U as User (Frontend)
     participant API as Express API
     participant ORCH as Orchestrator
-    participant LLM as Claude Sonnet
+    participant LLM as Gemini (default) / Claude Sonnet (optional)
     participant WEB as Company Site / DuckDuckGo
     participant DB as MongoDB
 
