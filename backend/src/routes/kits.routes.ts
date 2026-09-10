@@ -2,6 +2,7 @@ import { Router, type Response } from "express";
 import { z } from "zod";
 import type { PipelineDeps } from "../pipeline/types.js";
 import { KitModel } from "../db/models/Kit.js";
+import { Job } from "../db/models/Job.js";
 import { getOwnedKit } from "../repositories/kitRepository.js";
 import { requireAuth, type AuthedRequest } from "../middleware/requireAuth.js";
 import { createRateLimiter } from "../middleware/rateLimit.js";
@@ -31,6 +32,8 @@ const CreateKitBody = z.object({
   days: z.number().int().positive(),
   force: z.boolean().optional(),
 });
+
+const EditCompanyBriefBody = z.object({ summary: z.string().optional(), what_they_do: z.string().optional() });
 
 const RegenerateBody = z.object({
   section: z.enum(["company_brief", "questions:technical", "questions:behavioural", "questions:system-design", "questions:company-fit", "flashcards", "schedule"]),
@@ -136,6 +139,18 @@ export function createKitsRouter(): Router {
     }
   });
 
+  /** Cheap alias so a client that lost track of job_id (e.g. after a page refresh mid-generation) can recover it. */
+  kitsRouter.get("/:id/status", async (req: AuthedRequest, res, next) => {
+    try {
+      const kit = await loadOwnedKitOr404(req, res);
+      if (!kit) return;
+      const latestJob = await Job.findOne({ kitId: kit._id }).sort({ createdAt: -1 }).select("_id status");
+      res.json({ status: kit.status, job_id: latestJob ? String(latestJob._id) : null, job_status: latestJob?.status ?? null });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   kitsRouter.delete("/:id", async (req: AuthedRequest, res, next) => {
     try {
       const kit = await loadOwnedKitOr404(req, res);
@@ -161,6 +176,31 @@ export function createKitsRouter(): Router {
       const jobId = await createJobRecord(String(kit._id), req.userId!, "regenerate", section, [stepName as never]);
       runRegenerationInBackground(kit, jobId, section, pipelineDeps(res));
       res.status(202).json({ job_id: jobId, status: "queued" });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // --- Builder mutations: company brief (single-object section, no reorder/pin concept) ---
+
+  kitsRouter.patch("/:id/company_brief", async (req: AuthedRequest, res, next) => {
+    try {
+      const kit = await loadOwnedKitOr404(req, res);
+      if (!kit) return;
+      const parsed = EditCompanyBriefBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "INVALID_INPUT", message: "Invalid company brief edit" } });
+        return;
+      }
+      Object.assign(kit.company_brief, parsed.data);
+      if (!kit.company_brief._meta) {
+        kit.company_brief._meta = { source: "edited", pinned: false, order: 0, generatedAt: null, editedAt: null, generationBatch: null };
+      } else {
+        kit.company_brief._meta.source = "edited";
+      }
+      kit.company_brief._meta.editedAt = new Date().toISOString();
+      await kit.save();
+      res.json({ company_brief: kit.company_brief });
     } catch (error) {
       next(error);
     }

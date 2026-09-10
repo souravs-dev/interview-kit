@@ -65,6 +65,17 @@ describe("kit creation + job polling", () => {
     expect(getRes.body.kit.questions[0]._meta.source).toBe("generated");
   });
 
+  it("GET /:id/status lets a client recover job_id after losing track of it (e.g. a page refresh)", async () => {
+    const testApp = buildTestApp();
+    const cookie = await registerAndGetCookie(testApp.app, "status@example.com");
+    const kitId = await createReadyKit(testApp, cookie);
+    const res = await request(testApp.app).get(`/api/kits/${kitId}/status`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ready");
+    expect(res.body.job_id).toBeTruthy();
+    expect(res.body.job_status).toBe("done");
+  });
+
   it("rejects an unauthenticated kit creation request", async () => {
     const testApp = buildTestApp();
     const res = await request(testApp.app).post("/api/kits").set(ORIGIN_HEADER).send({ jd: "x", company_url: COMPANY_URL, days: 1 });
@@ -193,6 +204,20 @@ describe("builder mutations", () => {
     expect(res.status).toBe(204);
     const after = (await request(testApp.app).get(`/api/kits/${kitId}`).set("Cookie", cookie)).body.kit;
     expect(after.coverage.uncovered_requirement_ids).toContain("r1");
+  });
+
+  it("edits the company brief and marks it edited", async () => {
+    const testApp = buildTestApp();
+    const cookie = await registerAndGetCookie(testApp.app, "brief@example.com");
+    const kitId = await createReadyKit(testApp, cookie);
+    const res = await request(testApp.app)
+      .patch(`/api/kits/${kitId}/company_brief`)
+      .set(ORIGIN_HEADER)
+      .set("Cookie", cookie)
+      .send({ summary: "My hand-edited summary" });
+    expect(res.status).toBe(200);
+    expect(res.body.company_brief.summary).toBe("My hand-edited summary");
+    expect(res.body.company_brief._meta.source).toBe("edited");
   });
 
   it("regenerating a category preserves a hand-edited question in that same category (AC-011)", async () => {
