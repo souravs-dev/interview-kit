@@ -50,4 +50,30 @@ describe("withRetry", () => {
     await withRetry(fn, { maxAttempts: 3, baseDelayMs: 100, factor: 2, jitter: false, sleep });
     expect(delays).toEqual([100, 200]);
   });
+
+  it("honors getDelayMs' override over the computed exponential backoff", async () => {
+    const delays: number[] = [];
+    const sleep = async (ms: number) => {
+      delays.push(ms);
+    };
+    const fn = vi.fn().mockRejectedValueOnce(new Error("rate limited, retry in 51s")).mockResolvedValueOnce("ok");
+    await withRetry(fn, {
+      maxAttempts: 3,
+      baseDelayMs: 100,
+      jitter: false,
+      sleep,
+      getDelayMs: (error) => (error instanceof Error && error.message.includes("retry in 51s") ? 51_000 : undefined),
+    });
+    expect(delays).toEqual([51_000]);
+  });
+
+  it("falls back to computed backoff when getDelayMs returns undefined", async () => {
+    const delays: number[] = [];
+    const sleep = async (ms: number) => {
+      delays.push(ms);
+    };
+    const fn = vi.fn().mockRejectedValueOnce(new Error("generic failure")).mockResolvedValueOnce("ok");
+    await withRetry(fn, { maxAttempts: 3, baseDelayMs: 100, jitter: false, sleep, getDelayMs: () => undefined });
+    expect(delays).toEqual([100]);
+  });
 });

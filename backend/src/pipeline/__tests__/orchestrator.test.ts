@@ -149,6 +149,10 @@ describe("buildKit", () => {
     expect(kit.source.pages_used).toEqual([]);
     expect(kit.company_brief).toEqual({ summary: "", what_they_do: "", sources: [] });
     expect(validateKit(kit).valid).toBe(true);
+    // Never searches public discussion under a guessed/fallback company name —
+    // that tends to surface results for an unrelated "company" rather than
+    // the honest "nothing found" this should degrade to instead.
+    expect(deps.search.callLog).toEqual([]);
   });
 
   it("reports step failure progress and still surfaces the error when a step is truly unrecoverable", async () => {

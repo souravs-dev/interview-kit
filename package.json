@@ -4,12 +4,15 @@
   "version": "1.0.0",
   "description": "The AI Interview Prep Kit — Trao full-stack engineering assessment",
   "scripts": {
-    "evaluate": "pnpm --filter @interview-prep-kit/backend run evaluate",
+    "evaluate": "tsx backend/src/scripts/evaluate.ts",
     "dev:backend": "pnpm --filter @interview-prep-kit/backend run dev",
     "dev:frontend": "pnpm --filter @interview-prep-kit/frontend run dev",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "build": "pnpm -r run build"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1"
   },
   "engines": {
     "node": ">=20"

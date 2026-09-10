@@ -112,7 +112,14 @@ export async function buildKit(input: BuildKitInput, deps: PipelineDeps, onProgr
 
   const companyName = deriveCompanyName(crawl.pages[0]?.title, input.company_url);
 
-  const discussion = await run("search_public_discussion", () => searchPublicDiscussion(companyName, deps));
+  // If the company site was entirely unreachable, `companyName` is only a
+  // guessed fallback (e.g. the URL's hostname) — searching public
+  // discussion under a name we don't actually know tends to surface
+  // unrelated results for an unrelated "company" rather than nothing, which
+  // is worse than the honest "nothing found" this degrades to instead.
+  const discussion = await run("search_public_discussion", () =>
+    crawl.pages.length > 0 ? searchPublicDiscussion(companyName, deps) : Promise.resolve({ pages: [], sources: [] }),
+  );
   const hiringProcessNotes = discussion.pages
     .map((p) => p.text)
     .join("\n\n")
