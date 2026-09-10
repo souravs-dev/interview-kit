@@ -1,4 +1,4 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import mongoose, { Schema, model, type InferSchemaType, type Model } from "mongoose";
 
 /**
  * Mirrors the Appendix A kit structure (shared/src/schema/kit.ts) field
@@ -137,4 +137,4 @@ const kitSchema = new Schema(
 kitSchema.index({ userId: 1, dedupe_key: 1 });
 
 export type KitDoc = InferSchemaType<typeof kitSchema>;
-export const KitModel = (models.Kit as Model<KitDoc>) ?? model<KitDoc>("Kit", kitSchema);
+export const KitModel = (mongoose.models.Kit as Model<KitDoc>) ?? model<KitDoc>("Kit", kitSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import mongoose, { Schema, model, type InferSchemaType, type Model } from "mongoose";
 
 const sessionSchema = new Schema({
   token: { type: String, required: true, unique: true },
@@ -12,4 +12,4 @@ const sessionSchema = new Schema({
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export type SessionDoc = InferSchemaType<typeof sessionSchema>;
-export const Session = (models.Session as Model<SessionDoc>) ?? model<SessionDoc>("Session", sessionSchema);
+export const Session = (mongoose.models.Session as Model<SessionDoc>) ?? model<SessionDoc>("Session", sessionSchema);

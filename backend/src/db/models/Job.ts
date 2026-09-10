@@ -1,4 +1,4 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import mongoose, { Schema, model, type InferSchemaType, type Model } from "mongoose";
 
 const jobStepSchema = new Schema(
   {
@@ -30,4 +30,4 @@ const jobSchema = new Schema(
 jobSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export type JobDoc = InferSchemaType<typeof jobSchema>;
-export const Job = (models.Job as Model<JobDoc>) ?? model<JobDoc>("Job", jobSchema);
+export const Job = (mongoose.models.Job as Model<JobDoc>) ?? model<JobDoc>("Job", jobSchema);
