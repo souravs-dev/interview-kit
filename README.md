@@ -13,6 +13,10 @@ Built for the Trao Full-Stack Engineering Assessment.
 - App: https://interview-kit-phi.vercel.app
 - API: https://interview-kit-o70r.onrender.com
 
+![Walkthrough](docs/walkthrough.gif)
+
+*(Silent screen-capture walkthrough — see [docs/VIDEO_SCRIPT.md](docs/VIDEO_SCRIPT.md) for the narrated submission video script.)*
+
 > The backend runs on Render's free tier, which spins down after inactivity — the first request
 > after idle time can take 30–50s to wake it up. This is a known, documented tradeoff of the
 > free-tier hosting choice (see [Design tradeoffs](#design-tradeoffs--known-limitations)), not a bug.
